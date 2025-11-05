@@ -9,3 +9,4 @@ class ScanResponse(BaseModel):
     safe: bool
     label: str
     score: float
+    ocr_text: str | None = None
