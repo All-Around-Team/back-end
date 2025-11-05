@@ -30,3 +30,23 @@ async def validate(request: ScanRequest):
         label=label,
         score=score,
     )
+
+@app.post("/validate-multiple", response_model=list[ScanResponse])
+async def validate_multiple(request: list[ScanRequest]):
+    responses = []
+    for req in request:
+        result = classifier(req.text)[0]
+
+        label = result["label"]
+        score = float(result["score"])
+
+        safe = not (label == "INJECTION" and score > 0.5)
+
+        responses.append(
+            ScanResponse(
+                safe=safe,
+                label=label,
+                score=score,
+            )
+        )
+    return responses
