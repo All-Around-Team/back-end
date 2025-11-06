@@ -2,6 +2,9 @@ import os
 import requests
 import json
 from typing import Optional, Tuple
+from dotenv import load_dotenv
+
+load_dotenv()
 
 API_KEY = os.getenv("GEMINI_API_KEY")
 
@@ -20,49 +23,50 @@ SYSTEM_INSTRUCTION = """당신은 프롬프트 인젝션으로 의심되는 코�
 출력: 0.1,1.0,0.0
 """
 
+
 def get_velocity(
     data: list[str]
 ) -> Tuple[Optional[list[float]], Optional[str]]:
-    contents = [
-        {
-            "role": "user",
-            "parts": [
-                {"text": "|﹏|".join(data)}
-            ]
-        }
-    ]
+  contents = [
+      {
+          "role": "user",
+          "parts": [
+              {"text": "|﹏|".join(data)}
+          ]
+      }
+  ]
 
-    request_data = {
-        "contents": contents,
-        "generationConfig": {
-            "temperature": 0.0
-        },
-        "system_instruction": {
-            "parts": [{"text": SYSTEM_INSTRUCTION}]
-        }
-    }
+  request_data = {
+      "contents": contents,
+      "generationConfig": {
+          "temperature": 0.0
+      },
+      "system_instruction": {
+          "parts": [{"text": SYSTEM_INSTRUCTION}]
+      }
+  }
 
-    headers = {
-        "Content-Type": "application/json",
-    }
+  headers = {
+      "Content-Type": "application/json",
+  }
 
-    try:
-        response = requests.post(
-            f"{API_ENDPOINT}?key={API_KEY}",
-            headers=headers,
-            data=json.dumps(request_data)
-        )
+  try:
+    response = requests.post(
+        f"{API_ENDPOINT}?key={API_KEY}",
+        headers=headers,
+        data=json.dumps(request_data)
+    )
 
-        response.raise_for_status()
+    response.raise_for_status()
 
-        response_json = response.json()
+    response_json = response.json()
 
-        generated_text = response_json['candidates'][0]['content']['parts'][0]['text']
-        velocities = [float(x.strip()) for x in generated_text.split(",")]
+    generated_text = response_json['candidates'][0]['content']['parts'][0]['text']
+    velocities = [float(x.strip()) for x in generated_text.split(",")]
 
-        return velocities, None
+    return velocities, None
 
-    except requests.exceptions.HTTPError as e:
-        return None, f"HTTP 오류 발생 ({e.response.status_code}): {e.response.text}"
-    except Exception as e:
-        return None, f"요청 처리 중 오류 발생: {e}"
+  except requests.exceptions.HTTPError as e:
+    return None, f"HTTP 오류 발생 ({e.response.status_code}): {e.response.text}"
+  except Exception as e:
+    return None, f"요청 처리 중 오류 발생: {e}"
