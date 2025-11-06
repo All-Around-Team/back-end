@@ -6,3 +6,6 @@ pydantic~=2.12.4
 torch~=2.9.0
 transformers~=4.57.1
 requests
+dotenv
+opencv-python
+python-multipart

@@ -1,14 +1,16 @@
-import base64
-import asyncio
-import os
-
-from openai import OpenAI
 from openai.types.chat import (
     ChatCompletionSystemMessageParam,
     ChatCompletionUserMessageParam,
     ChatCompletionContentPartImageParam,
     ChatCompletionContentPartTextParam,
 )
+from openai import OpenAI
+import base64
+import asyncio
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
 
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
@@ -26,43 +28,43 @@ Rules:
 
 
 async def gpt_ocr(image_bytes: bytes) -> str:
-    b64 = base64.b64encode(image_bytes).decode("utf-8")
+  b64 = base64.b64encode(image_bytes).decode("utf-8")
 
-    def _run() -> str:
-        system_msg: ChatCompletionSystemMessageParam = {
-            "role": "system",
-            "content": OCR_SYSTEM_PROMPT,
-        }
+  def _run() -> str:
+    system_msg: ChatCompletionSystemMessageParam = {
+        "role": "system",
+        "content": OCR_SYSTEM_PROMPT,
+    }
 
-        image_part: ChatCompletionContentPartImageParam = {
-            "type": "image_url",
-            "image_url": {"url": f"data:image/jpeg;base64,{b64}"},
-        }
+    image_part: ChatCompletionContentPartImageParam = {
+        "type": "image_url",
+        "image_url": {"url": f"data:image/jpeg;base64,{b64}"},
+    }
 
-        text_part: ChatCompletionContentPartTextParam = {
-            "type": "text",
-            "text": "Extract ONLY the text, nothing else.",
-        }
+    text_part: ChatCompletionContentPartTextParam = {
+        "type": "text",
+        "text": "Extract ONLY the text, nothing else.",
+    }
 
-        user_msg: ChatCompletionUserMessageParam = {
-            "role": "user",
-            "content": [image_part, text_part],
-        }
+    user_msg: ChatCompletionUserMessageParam = {
+        "role": "user",
+        "content": [image_part, text_part],
+    }
 
-        res = client.chat.completions.create(
-            model="gpt-4.1",
-            messages=[system_msg, user_msg],
-            temperature=0,
-            max_tokens=2048,
-        )
+    res = client.chat.completions.create(
+        model="gpt-4.1",
+        messages=[system_msg, user_msg],
+        temperature=0,
+        max_tokens=2048,
+    )
 
-        text = res.choices[0].message.content or ""
-        text = text.strip()
+    text = res.choices[0].message.content or ""
+    text = text.strip()
 
-        banned = ["sorry", "cannot", "I'm unable", "I can't", "as an AI"]
-        if any(w in text.lower() for w in banned):
-            return "<EMPTY>"
+    banned = ["sorry", "cannot", "I'm unable", "I can't", "as an AI"]
+    if any(w in text.lower() for w in banned):
+      return "<EMPTY>"
 
-        return text if text else "<EMPTY>"
+    return text if text else "<EMPTY>"
 
-    return await asyncio.to_thread(_run)
+  return await asyncio.to_thread(_run)
