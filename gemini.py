@@ -27,6 +27,7 @@ SYSTEM_INSTRUCTION = """당신은 프롬프트 인젝션으로 의심되는 코�
 
 
 async def get_velocity_async(data: List[str]) -> Tuple[Optional[List[float]], Optional[str]]:
+    data = list(map(lambda x: x.replace("\n", " "), data))
     contents = [
         {
             "role": "user",
@@ -90,17 +91,21 @@ async def get_velocity_async(data: List[str]) -> Tuple[Optional[List[float]], Op
                 except Exception:
                     generated_text = ""
     except Exception as e:
+        print(f'Parsing error: {e}, response: {response_json!r}')
         return None, f"Parsing response failed: {e}"
 
     if not generated_text:
+        print(f'No generated text found in response: {response_json!r}')
         return None, "No generated text found in Gemini response"
 
     try:
         velocities = [float(x.strip()) for x in generated_text.split(",")]
     except Exception as e:
+        print(f'Failed to parse velocities: {e}, generated_text: {generated_text!r}')
         return None, f"Failed to parse velocities: {e} -- raw: {generated_text!r}"
 
-    if len(velocities) != len(data):
-        return None, f"Length mismatch: expected {len(data)} velocities but got {len(velocities)}"
+    if len(velocities) < len(data):
+        print(f'Length mismatch: expected {len(data)} velocities but got {len(velocities)}, {data!r}')
+        return None, f"Length mismatch: expected {len(data)} velocities but got {len(velocities)}, {data}"
 
     return velocities, None
