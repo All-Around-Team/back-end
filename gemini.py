@@ -20,8 +20,9 @@ SYSTEM_INSTRUCTION = """당신은 프롬프트 인젝션으로 의심되는 코�
 출력: 0.1,1.0,0.0
 """
 
+
 def get_velocity(
-    data: list[str]
+        data: list[str]
 ) -> Tuple[Optional[list[float]], Optional[str]]:
     contents = [
         {
