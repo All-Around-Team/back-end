@@ -20,24 +20,21 @@ classifier = pipeline(
     device=device,
 )
 
-SAFE_LABELS = {"SAFE"}
-
 
 def _normalize_output(result: list[dict[str, Any]] | dict[str, Any]) -> tuple[str, float]:
     if isinstance(result, list):
         result = result[0]
 
-    label = result.get("label", "").upper()
+    label = result.get("label", "")
     score = float(result.get("score", 0.0))
 
-    is_safe = label in SAFE_LABELS
-    return ("appropriate" if is_safe else "inappropriate"), score
+    return label, score
 
 
 def classify_sync(text: str):
     text = text.strip()
     if not text:
-        return "appropriate", 0.0
+        return "SAFE", 0.0
 
     result = classifier(text)
     return _normalize_output(result)
