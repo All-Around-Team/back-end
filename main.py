@@ -37,12 +37,12 @@ async def validate_multiple(reqs: list[ScanRequest]):
         ))
 
     mout = list(filter(lambda x: not x.safe, out))
-    velocities, err = await get_velocity_async(list(map(lambda x: x.text, mout)))
-    if err:
-        return out
-    for i, j in zip(mout, velocities):
-        i.score *= j
-
+    if (len(mout) > 0 and len(mout) < 60):
+        velocities, err = await get_velocity_async(list(map(lambda x: x.text, mout)))
+        if err:
+            return out
+        for i, j in zip(mout, velocities):
+            i.score *= j
     return out
 
 
