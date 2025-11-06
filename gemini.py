@@ -1,12 +1,14 @@
 import os
-import requests
-import json
-from typing import Optional, Tuple
+from typing import List, Optional, Tuple
+
+import httpx
 from dotenv import load_dotenv
 
 load_dotenv()
 
 API_KEY = os.getenv("GEMINI_API_KEY")
+if not API_KEY:
+    raise RuntimeError("GEMINI_API_KEY is not set in environment")
 
 MODEL_ID = "gemini-2.5-flash"
 API_ENDPOINT = f"https://generativelanguage.googleapis.com/v1beta/models/{MODEL_ID}:generateContent"
@@ -24,49 +26,81 @@ SYSTEM_INSTRUCTION = """당신은 프롬프트 인젝션으로 의심되는 코�
 """
 
 
-def get_velocity(
-        data: list[str]
-) -> Tuple[Optional[list[float]], Optional[str]]:
-  contents = [
-      {
-          "role": "user",
-          "parts": [
-              {"text": "|﹏|".join(data)}
-          ]
-      }
-  ]
+async def get_velocity_async(data: List[str]) -> Tuple[Optional[List[float]], Optional[str]]:
+    contents = [
+        {
+            "role": "user",
+            "parts": [
+                {"text": "|﹏|".join(data)}
+            ]
+        }
+    ]
 
-  request_data = {
-      "contents": contents,
-      "generationConfig": {
-          "temperature": 0.0
-      },
-      "system_instruction": {
-          "parts": [{"text": SYSTEM_INSTRUCTION}]
-      }
-  }
+    request_data = {
+        "contents": contents,
+        "generationConfig": {
+            "temperature": 0.0
+        },
+        "system_instruction": {
+            "parts": [{"text": SYSTEM_INSTRUCTION}]
+        }
+    }
 
-  headers = {
-      "Content-Type": "application/json",
-  }
+    headers = {
+        "Content-Type": "application/json",
+    }
 
-  try:
-    response = requests.post(
-        f"{API_ENDPOINT}?key={API_KEY}",
-        headers=headers,
-        data=json.dumps(request_data)
-    )
+    url = f"{API_ENDPOINT}?key={API_KEY}"
 
-    response.raise_for_status()
+    try:
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            r = await client.post(url, headers=headers, json=request_data)
+            r.raise_for_status()
+            response_json = r.json()
+    except httpx.HTTPStatusError as e:
+        return None, f"HTTP Error ({e.response.status_code}): {e.response.text}"
+    except Exception as e:
+        return None, f"Request error: {e}"
 
-    response_json = response.json()
+    try:
+        candidates = response_json.get("candidates") or response_json.get("candidate")
+        if candidates and isinstance(candidates, list):
+            first = candidates[0]
+            content = first.get("content") or first.get("output") or {}
+            if isinstance(content, dict):
+                parts = content.get("parts") or []
+            elif isinstance(content, list):
+                parts = content
+            else:
+                parts = []
 
-    generated_text = response_json['candidates'][0]['content']['parts'][0]['text']
-    velocities = [float(x.strip()) for x in generated_text.split(",")]
+            if parts and isinstance(parts, list):
+                part0 = parts[0]
+                if isinstance(part0, dict):
+                    generated_text = part0.get("text", "")
+                else:
+                    generated_text = str(part0)
+            else:
+                generated_text = first.get("text", "")
+        else:
+            generated_text = ""
+            if "candidates" in response_json:
+                try:
+                    generated_text = response_json["candidates"][0]["content"]["parts"][0]["text"]
+                except Exception:
+                    generated_text = ""
+    except Exception as e:
+        return None, f"Parsing response failed: {e}"
+
+    if not generated_text:
+        return None, "No generated text found in Gemini response"
+
+    try:
+        velocities = [float(x.strip()) for x in generated_text.split(",")]
+    except Exception as e:
+        return None, f"Failed to parse velocities: {e} -- raw: {generated_text!r}"
+
+    if len(velocities) != len(data):
+        return None, f"Length mismatch: expected {len(data)} velocities but got {len(velocities)}"
 
     return velocities, None
-
-  except requests.exceptions.HTTPError as e:
-    return None, f"HTTP 오류 발생 ({e.response.status_code}): {e.response.text}"
-  except Exception as e:
-    return None, f"요청 처리 중 오류 발생: {e}"

@@ -1,7 +1,8 @@
 import io, cv2, numpy as np
-from fastapi import FastAPI, UploadFile, File
+from fastapi import FastAPI, UploadFile, File, HTTPException
 from PIL import Image
 
+from gemini import get_velocity_async
 from models import ScanRequest, ScanResponse
 from utils.gpt import gpt_ocr
 from utils.classifier import classify_text
@@ -55,6 +56,20 @@ async def validate_image(file: UploadFile = File(...)):
         score=float(score),
         ocr_text=text
     )
+
+
+@app.post("/validate-gemini", response_model=list[float])
+async def validate_gemini(requests: list[ScanRequest]):
+    if not requests:
+        raise HTTPException(status_code=400, detail="Empty request list")
+
+    texts = [r.text for r in requests]
+
+    velocities, err = await get_velocity_async(texts)
+    if err is not None:
+        raise HTTPException(status_code=502, detail=err)
+
+    return velocities
 
 
 def preprocess(img: Image.Image) -> bytes:
