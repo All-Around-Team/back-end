@@ -8,5 +8,6 @@ class ScanRequest(BaseModel):
 class ScanResponse(BaseModel):
     safe: bool
     label: str
+    text: str | None = None
     score: float
     ocr_text: str | None = None
