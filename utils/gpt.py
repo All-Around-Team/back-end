@@ -1,5 +1,7 @@
 import base64
 import asyncio
+import os
+
 from openai import OpenAI
 from openai.types.chat import (
     ChatCompletionSystemMessageParam,
@@ -8,7 +10,7 @@ from openai.types.chat import (
     ChatCompletionContentPartTextParam,
 )
 
-client = OpenAI()
+client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 OCR_SYSTEM_PROMPT = """
 You are a world-class OCR engine.
